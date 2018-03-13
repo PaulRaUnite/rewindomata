@@ -21,6 +21,7 @@ func (ss stateSet) union(set stateSet) stateSet {
 	return newSet
 }
 
+type stateTransitions map[state]map[rune]stateSet
 
 func (st stateTransitions) add(from state, char rune, to state) {
 	if dir, ok := st[from]; ok {
@@ -33,8 +34,6 @@ func (st stateTransitions) add(from state, char rune, to state) {
 		st[from] = map[rune]stateSet{char: {to: {}}}
 	}
 }
-
-type stateTransitions map[state]map[rune]stateSet
 
 func (left stateTransitions) union(right stateTransitions) stateTransitions {
 	newTrans := make(stateTransitions, len(left)+len(right))
