@@ -1,4 +1,9 @@
-package automata
+package automaton
+
+import (
+	"github.com/PaulRaUnite/errors"
+	"github.com/PaulRaUnite/rewindomata/ast"
+)
 
 func NewAcceptor(char rune) Acceptor {
 	return Acceptor{
@@ -77,12 +82,13 @@ func (left Acceptor) Closure() Acceptor {
 		}
 	}
 	tailTrans := make(stateTransitions)
-	for from, directs := range newTrans {
+	for from, directs := range left.transitions {
 		for char, ends := range directs {
 			for end := range ends {
 				if _, ok := left.final[end]; ok {
 					tailTrans.add(from, char, finalStart)
 				}
+				tailTrans.add(from, char, end)
 			}
 		}
 	}
@@ -93,5 +99,37 @@ func (left Acceptor) Closure() Acceptor {
 		final:       newFinal,
 		transitions: newTrans,
 		max:         finalStart,
+	}
+}
+
+func ConstructFromAST(ast ast.AST) (Acceptor, error) {
+	if ast.Root == nil {
+		return Acceptor{initial: stateSet{0: {}}, final: stateSet{0: {}}, transitions: make(stateTransitions), max: 0}, nil
+	} else {
+		return construct(ast.Root)
+	}
+}
+
+func construct(root interface{}) (Acceptor, error) {
+	if node, ok := root.(ast.Node); ok {
+		left, err := construct(node.Children[0])
+		if err != nil {
+			return left, nil
+		}
+		right, err := construct(node.Children[1])
+		if err != nil {
+			return right, nil
+		}
+		if node.Type == ast.OR {
+			return left.Or(right), nil
+		} else if node.Type == ast.AND {
+			return left.And(right), nil
+		} else {
+			return Acceptor{}, errors.New("unknown node type")
+		}
+	} else if leaf, ok := root.(ast.Leaf); ok {
+		return NewAcceptor(leaf.Symbol), nil
+	} else {
+		return Acceptor{}, errors.New("unknown object inside an AST")
 	}
 }

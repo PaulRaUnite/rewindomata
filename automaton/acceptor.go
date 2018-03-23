@@ -1,4 +1,4 @@
-package automata
+package automaton
 
 // state type used for type safe
 // manipulations

@@ -1,4 +1,4 @@
-package automata
+package automaton
 
 import (
 	"reflect"
