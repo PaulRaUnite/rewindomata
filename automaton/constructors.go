@@ -70,7 +70,7 @@ func (left Acceptor) Closure() Acceptor {
 
 	newInit := stateSet{finalStart: {}}
 	newFinal := newInit
-	newTrans := make(stateTransitions, len(left.transitions))
+	newTrans := make(stateTransitions, len(left.transitions)).union(left.transitions)
 
 	for from, directs := range left.transitions {
 		if _, ok := left.initial[from]; ok {
@@ -82,13 +82,12 @@ func (left Acceptor) Closure() Acceptor {
 		}
 	}
 	tailTrans := make(stateTransitions)
-	for from, directs := range left.transitions {
+	for from, directs := range newTrans {
 		for char, ends := range directs {
 			for end := range ends {
 				if _, ok := left.final[end]; ok {
 					tailTrans.add(from, char, finalStart)
 				}
-				tailTrans.add(from, char, end)
 			}
 		}
 	}

@@ -1,8 +1,8 @@
 package automaton
 
 import (
-	"testing"
 	"github.com/PaulRaUnite/rewindomata/ast"
+	"testing"
 )
 
 func TestAcceptorBuilder_And(t *testing.T) {
@@ -10,7 +10,7 @@ func TestAcceptorBuilder_And(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	acc,err := ConstructFromAST(tree)
+	acc, err := ConstructFromAST(tree)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestAcceptorBuilder_Or(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	acc,err := ConstructFromAST(tree)
+	acc, err := ConstructFromAST(tree)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestAcceptorBuilder_Closure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	acc,err := ConstructFromAST(tree)
+	acc, err := ConstructFromAST(tree)
 	if err != nil {
 		t.Fatal(err)
 	}
