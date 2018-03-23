@@ -116,14 +116,20 @@ func construct(root interface{}) (Acceptor, error) {
 		if err != nil {
 			return left, nil
 		}
-		right, err := construct(node.Children[1])
-		if err != nil {
-			return right, nil
-		}
 		if node.Type == ast.OR {
+			right, err := construct(node.Children[1])
+			if err != nil {
+				return right, nil
+			}
 			return left.Or(right), nil
 		} else if node.Type == ast.AND {
+			right, err := construct(node.Children[1])
+			if err != nil {
+				return right, nil
+			}
 			return left.And(right), nil
+		} else if node.Type == ast.CLS {
+			return left.Closure(), nil
 		} else {
 			return Acceptor{}, errors.New("unknown node type")
 		}
