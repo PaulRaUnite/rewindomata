@@ -1,7 +1,9 @@
 package automaton
 
+import "math/rand"
+
 type queue struct {
-	start int
+	start  int
 	buffer []payLoad
 }
 
@@ -18,8 +20,21 @@ func (q *queue) pop() (payLoad, bool) {
 		q.buffer = q.buffer[:0]
 		return payLoad{}, false
 	}
-	defer func() {q.start += 1}()
-	return q.buffer[q.start], true
+	value := q.buffer[q.start]
+	q.start += 1
+	return value, true
+}
+
+func (q *queue) randomPop() (payLoad, bool) {
+	length := q.len()
+	if q.len() == 0 {
+		return payLoad{}, false
+	}
+	i := rand.Intn(length)
+	value := q.buffer[i]
+	q.buffer[i] = q.buffer[length-1]
+	q.buffer = q.buffer[:length-1]
+	return value, true
 }
 
 func (q queue) len() int {
