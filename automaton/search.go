@@ -2,7 +2,7 @@ package automaton
 
 import (
 	"unicode/utf8"
-	"sync"
+	"github.com/uber-go/atomic"
 )
 
 //see python realization
@@ -72,72 +72,60 @@ type optional struct {
 	presence bool
 }
 
-func merge(capacity int,cs ...<-chan optional ) <-chan optional {
-	var wg sync.WaitGroup
-	out := make(chan optional, capacity)
-
-	// Start an output goroutine for each input channel in cs.  output
-	// copies values from c to out until c is closed, then calls wg.Done.
-	output := func(c <-chan optional) {
-		for n := range c {
-			out <- n
-		}
-		wg.Done()
-	}
-	wg.Add(len(cs))
-	for _, c := range cs {
-		go output(c)
-	}
-
-	// Start a goroutine to close out once all the output goroutines are
-	// done.  This must start after the wg.Add call.
+func createWorker(acc Acceptor, in <-chan payLoad, out chan<- optional, termination <-chan struct{}, in_work *atomic.Int64) {
 	go func() {
-		wg.Wait()
-		close(out)
-	}()
-	return out
-}
-
-func createWorker(acc Acceptor, in <-chan payLoad, outputSize int) <-chan optional {
-	out := make(chan optional, outputSize)
-	go func() {
-		defer close(out)
-		for work := range in {
-			if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
-				out <- optional{found: true}
-				return
+		defer func() {
+			v := in_work.Dec()
+			if v == 0 {
+				close(out)
 			}
-			if len(work.rest) != 0 {
-				if jumps, ok := acc.transitions[work.state]; ok {
-					r, size := utf8.DecodeRuneInString(work.rest)
-					if nexts, ok := jumps[r]; ok {
-						for state := range nexts {
-							out <- optional{data: payLoad{state: state, rest: work.rest[size:]}, presence: true}
+		}()
+		for {
+			select {
+			case work, ok := <-in:
+				{
+					if !ok {
+						return
+					}
+					if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
+						out <- optional{found: true}
+						return
+					}
+					if len(work.rest) != 0 {
+						if jumps, ok := acc.transitions[work.state]; ok {
+							r, size := utf8.DecodeRuneInString(work.rest)
+							if nexts, ok := jumps[r]; ok {
+								for state := range nexts {
+									out <- optional{data: payLoad{state: state, rest: work.rest[size:]}, presence: true}
+								}
+							}
 						}
 					}
+					out <- optional{presence: false}
 				}
+			case <-termination:
+				return
 			}
-			out <- optional{presence: false}
 		}
 	}()
-	return out
 }
 
 //using goroutines
 func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
-	channelCapacity := routines * 2
+	channelCapacity := routines * 8
 	if channelCapacity < len(acc.initial) {
 		channelCapacity = len(acc.initial)
 	}
-	queue := make(chan payLoad, channelCapacity*2)
-	worker_outputs := make([]<-chan optional, 0, channelCapacity)
+	queue := make(chan payLoad, channelCapacity*4)
+	terminate := make(chan struct{}, 1)
+	commonOutput := make(chan optional, channelCapacity)
+	in_work := atomic.NewInt64(int64(routines))
 	for i := 0; i < routines; i++ {
-		worker_outputs = append(worker_outputs, createWorker(acc, queue, channelCapacity))
+		createWorker(acc, queue, commonOutput, terminate, in_work)
 	}
 	for state := range acc.initial {
 		queue <- payLoad{state: state, rest: word}
 	}
-	commonOutput := merge(channelCapacity*4, worker_outputs...)
 	counter := len(acc.initial)
 	found := false
 
@@ -156,6 +144,7 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 			}
 		}
 	}
+	close(terminate)
 	close(queue)
 	for v := range commonOutput {
 		_ = v
