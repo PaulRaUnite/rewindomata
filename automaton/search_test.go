@@ -51,3 +51,75 @@ func TestAcceptor_Searches(t *testing.T) {
 		}
 	}
 }
+
+func benchSearches(b *testing.B, result bool, searchFunc func(acc Acceptor, word string) bool) {
+	b.StopTimer()
+	for regexp, resultCases := range examples {
+		tree, err := ast.Parse(regexp)
+		if err != nil {
+			b.Fatal(err)
+		}
+		acc, err := ConstructFromAST(tree)
+		if err != nil {
+			b.Fatal(err)
+		}
+		for _, c := range resultCases[result] {
+			b.StartTimer()
+			for n := 0; n < b.N; n++ {
+				if searchFunc(acc, c) != result {
+					fmt.Println(acc)
+					b.Error(regexp, result, c)
+				}
+			}
+			b.StopTimer()
+		}
+	}
+	b.StartTimer()
+}
+func BenchmarkAcceptor_FrontSearchPositive(b *testing.B) {
+	benchSearches(b, true, func(acc Acceptor, word string) bool {
+		return acc.FrontSearch(word)
+	})
+}
+
+func BenchmarkAcceptor_AtomicSearchPositive(b *testing.B) {
+	benchSearches(b, true, func(acc Acceptor, word string) bool {
+		return acc.AtomicSearch(word)
+	})
+}
+
+func BenchmarkAcceptor_AtomicParallelSearchPositive(b *testing.B) {
+	benchSearches(b, true, func(acc Acceptor, word string) bool {
+		return acc.AtomicParallelSearch(word, ROUTINES)
+	})
+}
+
+func BenchmarkAcceptor_StochasticSearchPositive(b *testing.B) {
+	benchSearches(b, true, func(acc Acceptor, word string) bool {
+		return acc.StochasticSearch(word)
+	})
+}
+
+func BenchmarkAcceptor_FrontSearchNegative(b *testing.B) {
+	benchSearches(b, false, func(acc Acceptor, word string) bool {
+		return acc.FrontSearch(word)
+	})
+}
+
+func BenchmarkAcceptor_AtomicSearchNegative(b *testing.B) {
+	benchSearches(b, false, func(acc Acceptor, word string) bool {
+		return acc.AtomicSearch(word)
+	})
+}
+
+func BenchmarkAcceptor_AtomicParallelSearchNegative(b *testing.B) {
+	benchSearches(b, false, func(acc Acceptor, word string) bool {
+		return acc.AtomicParallelSearch(word, ROUTINES)
+	})
+}
+
+func BenchmarkAcceptor_StochasticSearchNegative(b *testing.B) {
+	benchSearches(b, false, func(acc Acceptor, word string) bool {
+		return acc.StochasticSearch(word)
+	})
+}
