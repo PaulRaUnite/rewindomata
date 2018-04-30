@@ -68,7 +68,7 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 	queue := make(chan payLoad, len(acc.initial)*2)
 	termination := make(chan struct{}, 1)
 	output := make(chan struct{}, 1)
-	scores := make(chan int, routines)
+	scores := make(chan int, routines+1)
 
 	for state := range acc.initial {
 		queue <- payLoad{state: state, rest: word}
