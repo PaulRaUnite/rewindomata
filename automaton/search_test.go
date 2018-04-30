@@ -9,14 +9,18 @@ import (
 const ROUTINES = 4
 
 var examples = map[string]map[bool][]string{
-	"ab+":    {true: {"ab"}, false: {"a", "b", ""}},
-	"ab|":    {true: {"a", "b"}, false: {"ab", "bc", "ac"}},
-	"ab+*":   {true: {"", "ab", "abab", "ababab"}, false: {"ba", "bb", "aa", "cc"}},
-	"abc++":  {true: {"abc"}, false: {"ba", "bb", "ac"}},
-	"ab+c*|": {true: {"", "cc", "ab"}, false: {"ac", "g"}},
-	"ab+c|":  {true: {"ab", "c"}, false: {"abc"}},
-	"a*":     {true: {"a", "aa", "aaa"}, false: {"b", "c", "abb"}},
-	"ab|*":   {true: {"aabb", "abba", "abaa"}, false: {"aaac", "bbbbbbbbbbad"}},
+	"ab+":                                    {true: {"ab"}, false: {"a", "b", ""}},
+	"ab|":                                    {true: {"a", "b"}, false: {"ab", "bc", "ac"}},
+	"ab+*":                                   {true: {"", "ab", "abab", "ababab"}, false: {"ba", "bb", "aa", "cc"}},
+	"abc++":                                  {true: {"abc"}, false: {"ba", "bb", "ac"}},
+	"ab+c*|":                                 {true: {"", "cc", "ab"}, false: {"ac", "g"}},
+	"ab+c|":                                  {true: {"ab", "c"}, false: {"abc"}},
+	"a*":                                     {true: {"", "a", "aa", "aaa"}, false: {"b", "c", "abb"}},
+	"ab|*":                                   {true: {"aabb", "abba", "abaa", ""}, false: {"aaac", "bbbbbbbbbbad"}},
+	"ab+*cb|d++":                             {true: {"abcd", "cd", "bd", "ababcd"}, false: {"abcbd"}},
+	"ab+c+*ab+d+*|":                          {true: {"abc", "abd", "abcabcabc", "abdabdabd", ""}, false: {"abcd", "escape", "abcabcabcabdabe"}},
+	"ab+c+ab+d+|*":                           {true: {"abc", "abd", "abcabdabc", "abdabcabc", ""}, false: {"abcde", "abcabcabdbcd"}},
+	"abbzkm+|+|+adn+ckab+*z|++|+|abka*+++|*": {true: {"ababkmabz", "abkaaaadn", "ackababab", "ackzabkaaa", "ackzababzababkm"}, false: {"ababkmabzam", "abkaaaadncd", "ackabababde", "ackzabkaaasd", "ackzababzababkmsdc"}},
 }
 
 func TestAcceptor_Searches(t *testing.T) {
