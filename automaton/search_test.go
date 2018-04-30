@@ -29,15 +29,19 @@ func TestAcceptor_Searches(t *testing.T) {
 			for _, c := range cases {
 				if acc.AtomicSearch(c) != result {
 					fmt.Println(acc)
-					t.Fatal(regexp, result, c)
+					t.Error(regexp, result, c)
 				}
 				if acc.FrontSearch(c) != result {
 					fmt.Println(acc)
-					t.Fatal(regexp, result, c)
+					t.Error(regexp, result, c)
 				}
-				if acc.AtomicParallelSearch(c, 2) != result {
+				if acc.AtomicParallelSearch(c, 3) != result {
 					fmt.Println(acc)
-					t.Fatal(regexp, result, c)
+					t.Error(regexp, result, c)
+				}
+				if acc.StochasticSearch(c) != result {
+					fmt.Println(acc)
+					t.Error(regexp, result, c)
 				}
 			}
 		}

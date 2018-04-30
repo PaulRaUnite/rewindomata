@@ -33,6 +33,7 @@ type payLoad struct {
 	state state
 	rest  string
 }
+
 //see automaton lectures
 func (acc Acceptor) AtomicSearch(word string) bool {
 	queue := newQueue()
@@ -40,7 +41,7 @@ func (acc Acceptor) AtomicSearch(word string) bool {
 		queue.push(payLoad{state: state, rest: word})
 	}
 
-	for ;; {
+	for ; ; {
 		work, ok := queue.pop()
 		if ok != true {
 			break
@@ -117,6 +118,35 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 			if dataSize == 0 {
 				close(termination)
 				return false
+			}
+		}
+	}
+	return false
+}
+
+func (acc Acceptor) StochasticSearch(word string) bool {
+	queue := newQueue()
+	for state := range acc.initial {
+		queue.push(payLoad{state: state, rest: word})
+	}
+
+	for ; ; {
+		work, ok := queue.randomPop()
+		if ok != true {
+			break
+		}
+		if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
+			return true
+		}
+		if len(work.rest) == 0 {
+			continue
+		}
+		if jumps, ok := acc.transitions[work.state]; ok {
+			r, size := utf8.DecodeRuneInString(work.rest)
+			if nexts, ok := jumps[r]; ok {
+				for state := range nexts {
+					queue.push(payLoad{state: state, rest: work.rest[size:]})
+				}
 			}
 		}
 	}
