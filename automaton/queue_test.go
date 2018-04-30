@@ -37,8 +37,8 @@ func TestRandomQueue(t *testing.T) {
 		if q.len() != 1 {
 			t.Fail()
 		}
-		if out != e1 || out != e2 {
-			t.Fail()
+		if out != e1 && out != e2 {
+			t.Fatal(out)
 		}
 	} else {
 		t.Fail()
