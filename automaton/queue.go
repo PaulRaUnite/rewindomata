@@ -21,7 +21,13 @@ func (q *queue) pop() (payLoad, bool) {
 		return payLoad{}, false
 	}
 	value := q.buffer[q.start]
-	q.start += 1
+	if q.start == len(q.buffer)/4 {
+		data := q.buffer[q.start+1:]
+		q.buffer = append(q.buffer[:0], data...)
+		q.start=0
+	} else {
+		q.start += 1
+	}
 	return value, true
 }
 
