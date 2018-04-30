@@ -6,6 +6,8 @@ import (
 	"github.com/PaulRaUnite/rewindomata/ast"
 )
 
+const ROUTINES = 4
+
 var examples = map[string]map[bool][]string{
 	"ab+":    {true: {"ab"}, false: {"a", "b", ""}},
 	"ab|":    {true: {"a", "b"}, false: {"ab", "bc", "ac"}},
@@ -38,6 +40,10 @@ func TestAcceptor_Searches(t *testing.T) {
 					t.Error(regexp, result, c)
 				}
 				if acc.StochasticSearch(c) != result {
+					fmt.Println(acc)
+					t.Error(regexp, result, c)
+				}
+				if acc.AtomicParallelSearch(c, ROUTINES) != result {
 					fmt.Println(acc)
 					t.Error(regexp, result, c)
 				}
