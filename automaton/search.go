@@ -2,6 +2,7 @@ package automaton
 
 import (
 	"unicode/utf8"
+	"sync"
 )
 
 //see python realization
@@ -64,64 +65,101 @@ func (acc Acceptor) AtomicSearch(word string) bool {
 	return false
 }
 
-//using goroutines
-func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
-	queue := make(chan payLoad, len(acc.initial)*2)
-	termination := make(chan struct{}, 1)
-	output := make(chan struct{}, 1)
-	scores := make(chan int, routines+1)
+type optional struct {
+	data     payLoad
+	found    bool
+	presence bool
+}
 
-	for state := range acc.initial {
-		queue <- payLoad{state: state, rest: word}
+func merge(cs ...<-chan optional) <-chan optional {
+	var wg sync.WaitGroup
+	out := make(chan optional, len(cs))
+
+	// Start an output goroutine for each input channel in cs.  output
+	// copies values from c to out until c is closed, then calls wg.Done.
+	output := func(c <-chan optional) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
 	}
-	worker := func(queue chan payLoad, scores chan<- int, output chan<- struct{}, terminate <-chan struct{}) {
-		for {
-			select {
-			case work := <-queue:
-				if len(work.rest) == 0 {
-					if _, ok := acc.final[work.state]; ok {
-						output <- struct{}{}
-						return
-					} else {
-						scores <- -1
-						continue
-					}
-				}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+
+	// Start a goroutine to close out once all the output goroutines are
+	// done.  This must start after the wg.Add call.
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
+func createWorker(acc Acceptor, in <-chan payLoad, outputSize int) <-chan optional {
+	out := make(chan optional, outputSize)
+	go func() {
+		defer close(out)
+		for work := range in {
+			if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
+				out <- optional{found: true}
+				return
+			}
+			if len(work.rest) != 0 {
 				if jumps, ok := acc.transitions[work.state]; ok {
 					r, size := utf8.DecodeRuneInString(work.rest)
 					if nexts, ok := jumps[r]; ok {
 						for state := range nexts {
-							queue <- payLoad{state: state, rest: work.rest[size:]}
+							out <- optional{data: payLoad{state: state, rest: work.rest[size:]}, presence: true}
 						}
-
-						scores <- len(nexts)
 					}
 				}
-				scores <- -1
-			case <-terminate:
-				return
 			}
+			out <- optional{presence: false}
 		}
-	}
-	for i := 0; i < routines; i++ {
-		go worker(queue, scores, output, termination)
-	}
+	}()
+	return out
+}
 
-	dataSize := len(acc.initial)
-	for {
-		select {
-		case <-output:
-			close(termination)
-			return true
-		case increase := <-scores:
-			dataSize += increase
-			if dataSize == 0 {
-				close(termination)
-				return false
+//using goroutines
+func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
+	channelCapacity := routines * 2
+	if channelCapacity < len(acc.initial) {
+		channelCapacity = len(acc.initial)
+	}
+	queue := make(chan payLoad, channelCapacity)
+	worker_outputs := make([]<-chan optional, 0, channelCapacity)
+	for i := 0; i < routines; i++ {
+		worker_outputs = append(worker_outputs, createWorker(acc, queue, channelCapacity))
+	}
+	for state := range acc.initial {
+		queue <- payLoad{state: state, rest: word}
+	}
+	commonOutput := merge(worker_outputs...)
+	counter := len(acc.initial)
+	found := false
+
+	for value := range commonOutput {
+		if value.found {
+			found = true
+			break
+		}
+		if value.presence {
+			counter++
+			queue <- value.data
+		} else {
+			counter--
+			if counter == 0 {
+				break
 			}
 		}
 	}
-	return false
+	close(queue)
+	for v := range commonOutput {
+		_ = v
+	}
+	return found
 }
 
 func (acc Acceptor) StochasticSearch(word string) bool {
