@@ -72,9 +72,9 @@ type optional struct {
 	presence bool
 }
 
-func merge(cs ...<-chan optional) <-chan optional {
+func merge(capacity int,cs ...<-chan optional ) <-chan optional {
 	var wg sync.WaitGroup
-	out := make(chan optional, len(cs))
+	out := make(chan optional, capacity)
 
 	// Start an output goroutine for each input channel in cs.  output
 	// copies values from c to out until c is closed, then calls wg.Done.
@@ -129,7 +129,7 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 	if channelCapacity < len(acc.initial) {
 		channelCapacity = len(acc.initial)
 	}
-	queue := make(chan payLoad, channelCapacity)
+	queue := make(chan payLoad, channelCapacity*2)
 	worker_outputs := make([]<-chan optional, 0, channelCapacity)
 	for i := 0; i < routines; i++ {
 		worker_outputs = append(worker_outputs, createWorker(acc, queue, channelCapacity))
@@ -137,7 +137,7 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 	for state := range acc.initial {
 		queue <- payLoad{state: state, rest: word}
 	}
-	commonOutput := merge(worker_outputs...)
+	commonOutput := merge(channelCapacity*4, worker_outputs...)
 	counter := len(acc.initial)
 	found := false
 
