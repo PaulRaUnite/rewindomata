@@ -2,8 +2,6 @@ package automaton
 
 import (
 	"unicode/utf8"
-
-	"github.com/golang-collections/collections/queue"
 )
 
 //see python realization
@@ -31,20 +29,22 @@ func (acc Acceptor) FrontSearch(word string) bool {
 	return false
 }
 
+type payLoad struct {
+	state state
+	rest  string
+}
 //see automaton lectures
 func (acc Acceptor) AtomicSearch(word string) bool {
-	type payLoad struct {
-		state state
-		rest  string
-	}
-
-	queue := queue.New()
+	queue := newQueue()
 	for state := range acc.initial {
-		queue.Enqueue(payLoad{state: state, rest: word})
+		queue.push(payLoad{state: state, rest: word})
 	}
 
-	for work := queue.Dequeue(); work != nil; work = queue.Dequeue() {
-		work := work.(payLoad)
+	for ;; {
+		work, ok := queue.pop()
+		if ok != true {
+			break
+		}
 		if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
 			return true
 		}
@@ -55,7 +55,7 @@ func (acc Acceptor) AtomicSearch(word string) bool {
 			r, size := utf8.DecodeRuneInString(work.rest)
 			if nexts, ok := jumps[r]; ok {
 				for state := range nexts {
-					queue.Enqueue(payLoad{state: state, rest: work.rest[size:]})
+					queue.push(payLoad{state: state, rest: work.rest[size:]})
 				}
 			}
 		}
@@ -65,10 +65,6 @@ func (acc Acceptor) AtomicSearch(word string) bool {
 
 //using goroutines
 func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
-	type payLoad struct {
-		state state
-		rest  string
-	}
 	queue := make(chan payLoad, len(acc.initial)*2)
 	termination := make(chan struct{}, 1)
 	output := make(chan struct{}, 1)

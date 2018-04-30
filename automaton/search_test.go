@@ -35,7 +35,7 @@ func TestAcceptor_Searches(t *testing.T) {
 					fmt.Println(acc)
 					t.Fatal(regexp, result, c)
 				}
-				if acc.AtomicParallelSearch(c, 5) != result {
+				if acc.AtomicParallelSearch(c, 2) != result {
 					fmt.Println(acc)
 					t.Fatal(regexp, result, c)
 				}

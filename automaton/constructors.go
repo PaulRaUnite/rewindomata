@@ -1,7 +1,7 @@
 package automaton
 
 import (
-	"github.com/PaulRaUnite/errors"
+	"errors"
 	"github.com/PaulRaUnite/rewindomata/ast"
 )
 
