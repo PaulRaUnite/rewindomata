@@ -6,7 +6,7 @@ import (
 	"github.com/PaulRaUnite/rewindomata/ast"
 )
 
-const ROUTINES = 4
+const ROUTINES = 2
 
 var examples = map[string]map[bool][]string{
 	"ab+":                                    {true: {"ab"}, false: {"a", "b", ""}},
