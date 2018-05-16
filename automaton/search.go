@@ -66,13 +66,18 @@ func (acc Acceptor) AtomicSearch(word string) bool {
 	return false
 }
 
+type factoryPayload struct {
+	state   state
+	rest    string
+	wordNum int
+}
 type optional struct {
-	data     payLoad
+	data     factoryPayload
 	found    bool
 	presence bool
 }
 
-func createWorker(acc Acceptor, in <-chan payLoad, out chan<- optional, termination <-chan struct{}, in_work *atomic.Int64) {
+func createWorker(acc Acceptor, in <-chan factoryPayload, out chan<- optional, termination <-chan struct{}, in_work *atomic.Int64) {
 	go func() {
 		defer func() {
 			v := in_work.Dec()
@@ -87,21 +92,31 @@ func createWorker(acc Acceptor, in <-chan payLoad, out chan<- optional, terminat
 					if !ok {
 						return
 					}
-					if _, ok := acc.final[work.state]; ok && len(work.rest) == 0 {
-						out <- optional{found: true}
-						return
-					}
-					if len(work.rest) != 0 {
+					if len(work.rest) == 0 {
+						if _, ok := acc.final[work.state]; ok {
+							out <- optional{data: work, found: true, presence: false}
+						} else {
+							out <- optional{found: false, presence: false}
+						}
+					} else {
 						if jumps, ok := acc.transitions[work.state]; ok {
 							r, size := utf8.DecodeRuneInString(work.rest)
 							if nexts, ok := jumps[r]; ok {
 								for state := range nexts {
-									out <- optional{data: payLoad{state: state, rest: work.rest[size:]}, presence: true}
+									out <- optional{
+										data: factoryPayload{
+											state:   state,
+											rest:    work.rest[size:],
+											wordNum: work.wordNum,
+										},
+										found:    false,
+										presence: true,
+									}
 								}
 							}
 						}
+						out <- optional{found: false, presence: false}
 					}
-					out <- optional{presence: false}
 				}
 			case <-termination:
 				return
@@ -111,12 +126,10 @@ func createWorker(acc Acceptor, in <-chan payLoad, out chan<- optional, terminat
 }
 
 //using goroutines
-func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
-	channelCapacity := routines * 8
-	if channelCapacity < len(acc.initial) {
-		channelCapacity = len(acc.initial)
-	}
-	queue := make(chan payLoad, channelCapacity*4)
+func (acc Acceptor) AtomicParallelSearch(words []string, routines int) []bool {
+	channelCapacity := len(acc.initial) * len(words) + routines * 8 //??? don't know how to compute channel size
+
+	queue := make(chan factoryPayload, channelCapacity*4)
 	terminate := make(chan struct{}, 1)
 	commonOutput := make(chan optional, channelCapacity)
 	in_work := atomic.NewInt64(int64(routines))
@@ -124,15 +137,23 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 		createWorker(acc, queue, commonOutput, terminate, in_work)
 	}
 	for state := range acc.initial {
-		queue <- payLoad{state: state, rest: word}
+		for i, word := range words {
+			queue <- factoryPayload{state: state, rest: word, wordNum: i}
+		}
 	}
-	counter := len(acc.initial)
-	found := false
+	counter := len(acc.initial) * len(words)
+	notFound := len(words)
 
+	result := make([]bool, len(words))
 	for value := range commonOutput {
 		if value.found {
-			found = true
-			break
+			if result[value.data.wordNum] == false {
+				result[value.data.wordNum] = true
+				notFound--
+				if notFound == 0 {
+					break
+				}
+			}
 		}
 		if value.presence {
 			counter++
@@ -149,7 +170,7 @@ func (acc Acceptor) AtomicParallelSearch(word string, routines int) bool {
 	for v := range commonOutput {
 		_ = v
 	}
-	return found
+	return result
 }
 
 func (acc Acceptor) StochasticSearch(word string) bool {

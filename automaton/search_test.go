@@ -33,23 +33,25 @@ func TestAcceptor_Searches(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for result, cases := range resultCases {
+		for expected, cases := range resultCases {
 			for _, c := range cases {
-				if acc.AtomicSearch(c) != result {
+				if acc.AtomicSearch(c) != expected {
 					fmt.Println(acc)
-					t.Error(regexp, result, c)
+					t.Error(regexp, expected, c)
 				}
-				if acc.FrontSearch(c) != result {
+				if acc.FrontSearch(c) != expected {
 					fmt.Println(acc)
-					t.Error(regexp, result, c)
+					t.Error(regexp, expected, c)
 				}
-				if acc.StochasticSearch(c) != result {
+				if acc.StochasticSearch(c) != expected {
 					fmt.Println(acc)
-					t.Error(regexp, result, c)
+					t.Error(regexp, expected, c)
 				}
-				if acc.AtomicParallelSearch(c, ROUTINES) != result {
-					fmt.Println(acc)
-					t.Error(regexp, result, c)
+			}
+			output := acc.AtomicParallelSearch(cases, ROUTINES)
+			for _, r := range output {
+				if r != expected {
+					t.Error(regexp, output, cases, expected)
 				}
 			}
 		}
@@ -92,12 +94,34 @@ func BenchmarkAcceptor_AtomicSearchPositive(b *testing.B) {
 	})
 }
 
-func BenchmarkAcceptor_AtomicParallelSearchPositive(b *testing.B) {
-	benchSearches(b, true, func(acc Acceptor, word string) bool {
-		return acc.AtomicParallelSearch(word, ROUTINES)
-	})
+func benchAtomicParallelSearch(b *testing.B, expected bool) {
+	b.StopTimer()
+	for regexp, resultCases := range examples {
+		tree, err := ast.Parse(regexp)
+		if err != nil {
+			b.Fatal(err)
+		}
+		acc, err := ConstructFromAST(tree)
+		if err != nil {
+			b.Fatal(err)
+		}
+		b.StartTimer()
+		for n := 0; n < b.N; n++ {
+			for _, output := range acc.AtomicParallelSearch(resultCases[expected], ROUTINES) {
+				if output != expected {
+					fmt.Println(acc)
+					b.Error(regexp, output, expected)
+				}
+			}
+		}
+		b.StopTimer()
+	}
+	b.StartTimer()
 }
 
+func BenchmarkAcceptor_AtomicParallelSearchPositive(b *testing.B) {
+	benchAtomicParallelSearch(b, true)
+}
 func BenchmarkAcceptor_StochasticSearchPositive(b *testing.B) {
 	benchSearches(b, true, func(acc Acceptor, word string) bool {
 		return acc.StochasticSearch(word)
@@ -117,9 +141,7 @@ func BenchmarkAcceptor_AtomicSearchNegative(b *testing.B) {
 }
 
 func BenchmarkAcceptor_AtomicParallelSearchNegative(b *testing.B) {
-	benchSearches(b, false, func(acc Acceptor, word string) bool {
-		return acc.AtomicParallelSearch(word, ROUTINES)
-	})
+	benchAtomicParallelSearch(b, false)
 }
 
 func BenchmarkAcceptor_StochasticSearchNegative(b *testing.B) {
