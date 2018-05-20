@@ -41,6 +41,6 @@ Algorithm starts pool of workers, that try to recognise a few words by the autom
 | BenchmarkAcceptor_AtomicSearchNegative |           	   20000	 |    83764 ns/op	|   16091 B/op	|  
     35 allocs/op |
 | BenchmarkAcceptor_AtomicParallelSearchNegative   	|    2000	|    642846 ns/op	|   45381 B/op	  |    84 allocs/op |
-| BenchmarkAcceptor_StochasticSearchNegative   |    	   10000	|    114276 ns/op	|   14736 B/op	 |     35 allocs/op |
+| BenchmarkAcceptor_StochasticSearchNegative   |    	   10000	|    114276 ns/op	|   14736 B/op |    35 allocs/op  |
 
 Maybe, my test cases are not representative, but I guess in case of parallel search nothing much can be changed, it is not effective at all, because of small amount of useful computations in workers: a lot of time they spend synchronizing with each other. 
