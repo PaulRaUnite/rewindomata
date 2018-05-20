@@ -33,14 +33,13 @@ Algorithm starts pool of workers, that try to recognise a few words by the autom
 
 | Benchmark name | loop steps | speed: less better | memory consumption: less better | allocations |
 |-------|-------|-------|-------|-------|
-| BenchmarkAcceptor_FrontSearchPositive       |     	   10000	|    152007 ns/op	|   11033 B/op	|     240 allocs/op |
-| BenchmarkAcceptor_AtomicSearchPositive          | 	   10000	|    100185 ns/op	|   19037 B/op	 |     43 allocs/op |
-| BenchmarkAcceptor_AtomicParallelSearchPositive   |	    2000	|    733733 ns/op	|  48591 B/op	 |     84 allocs/op |
-| BenchmarkAcceptor_StochasticSearchPositive      |	   10000	 |   126136 ns/op	 |  17704 B/op	 |     42 allocs/op |
-| BenchmarkAcceptor_FrontSearchNegative      |      	   10000	|    126630 ns/op	|    8665 B/op	 |    182 allocs/op |
-| BenchmarkAcceptor_AtomicSearchNegative |           	   20000	 |    83764 ns/op	|   16091 B/op	|  
-    35 allocs/op |
-| BenchmarkAcceptor_AtomicParallelSearchNegative   	|    2000	|    642846 ns/op	|   45381 B/op	  |    84 allocs/op |
-| BenchmarkAcceptor_StochasticSearchNegative   |    	   10000	|    114276 ns/op	|   14736 B/op |    35 allocs/op  |
+| BenchmarkAcceptor_FrontSearchPositive | 10000	|    152007 ns/op | 11033 B/op | 240 allocs/op |
+| BenchmarkAcceptor_AtomicSearchPositive | 10000 |    100185 ns/op | 19037 B/op | 43 allocs/op |
+| BenchmarkAcceptor_AtomicParallelSearchPositive |  2000 | 733733 ns/op | 48591 B/op | 84 allocs/op |
+| BenchmarkAcceptor_StochasticSearchPositive |	   10000 | 126136 ns/op | 17704 B/op | 42 allocs/op |
+| BenchmarkAcceptor_FrontSearchNegative |      	   10000 | 126630 ns/op | 8665 B/op | 182 allocs/op |
+| BenchmarkAcceptor_AtomicSearchNegative | 20000 |  83764 ns/op | 16091 B/op | 35 allocs/op |
+| BenchmarkAcceptor_AtomicParallelSearchNegative |    2000 | 642846 ns/op | 45381 B/op | 84 allocs/op |
+| BenchmarkAcceptor_StochasticSearchNegative | 10000 | 114276 ns/op | 14736 B/op | 35 allocs/op |
 
 Maybe, my test cases are not representative, but I guess in case of parallel search nothing much can be changed, it is not effective at all, because of small amount of useful computations in workers: a lot of time they spend synchronizing with each other. 
